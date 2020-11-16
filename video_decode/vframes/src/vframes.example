@@ -1,0 +1,32 @@
+#include "libxhiveplayer.h"
+#include "callback.h"
+
+ST_InputDataInfo_t data_info;
+
+/*当一帧视频数据解码后，该callback函数被调用返回解码后的视频数据和相关的信息*/
+static int vframes_callback(void *p_pOwner, void *cb_data) {
+    ST_EPCallbackData *data_info = (ST_EPCallbackData *)cb_data;
+
+    data_info->stCallbackFrameInfo[0].stVideoFrame.pszFrameData：解码出的原始视频数据，格式为data_info.format定义的
+    data_info->stCallbackFrameInfo[0].stVideoFrame.uFrameSize：  解码出的原始视频数据大小
+
+    data_info->stCallbackFrameInfo[1].stVideoFrame.pszFrameData：resize后的视频数据，格式为data_info.format定义的
+    data_info->stCallbackFrameInfo[1].stVideoFrame.uFrameSize：  resize后的视频数据大小
+}
+
+/*对于多路解码的应用，用户可能需要传入标识该路解码的数据结构指针。
+  该指针不会做处理，直接由callback函数vframes_callback（）中的*p_pOwner返回
+*/
+data_info.cb_priv    = (void *)<private data pointer>;
+/*自定义的callback函数来处理返回的视频图片*/
+data_info.cb_aifncb  = (void *)vframes_callback;
+data_info.rsz_width  = <如果图片需要同时返回resize之后的图片，在这里输入resize的宽度>;
+data_info.rsz_height = <如果图片需要同时返回resize之后的图片，在这里输入resize的高度>;
+data_info.format     = <硬件解码后的视频数据格式是GST_VIDEO_DATA_FORMAT_NV12，
+                        如果需要直接返回其他格式的数据，需要在这里定义>;
+
+/*播放视频流，一直到播放完成*/
+xhiveplayer_vcb(<播放视频的URL，可以为http, rtsp, file etc>,
+                <解码路数的id>,
+                <多线程处理多路解码：0； 多进程处理解码：1>,
+                (void *)&data_info);
