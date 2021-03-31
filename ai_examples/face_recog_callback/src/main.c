@@ -4,6 +4,9 @@
 
 #include "xhiveai.h"
 
+/*
+ void *pAppData: setting.app_data
+*/
 static int CallbackEventHandler( void *pAppData,
                                  xHiveAiEventType_t eEvent,
                                  void *pEventData ) {
@@ -59,10 +62,13 @@ int main(int argc, const char *argv[]) {
         return -1;
     }
 
-    setting.dst      = XHAI_DS_Url;
-    setting.url      = strdup(argv[1]);
+    setting.dst      = XHAI_DS_Url;     // use URL type video stream
+    setting.url      = strdup(argv[1]); // http/rtsp ...
+    /*must be "face_recog_callback"*/
     setting.pl_name  = pl;
+    /*give the short description to the video stream*/
     setting.alias    = alias;
+    /*the application private data that would be returned as <void *pAppData> in CallbackEventHandler()*/
     setting.app_data = NULL;
 
     handle = xhiveai_create(&setting);
@@ -82,6 +88,7 @@ int main(int argc, const char *argv[]) {
     cb_config.pic_width = 0;
     cb_config.pic_height = 0;
 
+    /*register the application callbacks for recieving the AI results*/
     handle->registerCallback(handle,
                              &cb_config,
                              &callback);
@@ -92,6 +99,7 @@ int main(int argc, const char *argv[]) {
     }
     printf("run() -- OK!\n");
 
+    /*endless waiting until the playing is complete*/
     handle->waitOnProcess(handle);
 
     printf("Complete!!!\n");
