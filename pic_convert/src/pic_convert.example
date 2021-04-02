@@ -1,0 +1,26 @@
+#include "amlpic.h"
+
+PicSetting_t picSetting;
+AMLPIC_HANDLE_t picHandle;
+
+AMLPIC_HANDLE_t picScaleHandle;
+
+picSetting.op          = PIC_CONVERT_user2user;
+picSetting.src.width   = <input picture width>;
+picSetting.src.height  = <input picture height>;
+picSetting.src.format  = <input picture format with PicFormat_t type>;
+
+picSetting.dest.width  = <output picture width>;;
+picSetting.dest.height = <output picture height>;
+picSetting.dest.format = <output picture format with PicFormat_t type>;
+
+// To initialize the picture converter
+picHandle = amlPicInit(&picSetting);
+
+while (picture data buffer input) {
+    //See amlpic.h for detail explanations
+    amlPicProc();
+}
+
+//To release the picture converter after all are done
+amlPicRelease(picScaleHandle);

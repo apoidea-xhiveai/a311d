@@ -1,32 +1,100 @@
-#include "libxhiveplayer.h"
-#include "callback.h"
+#include "amldec.h"
 
-ST_InputDataInfo_t data_info;
+#define _ALIGN_(x, mask)    (((x) + (mask)) & ~(mask))
+#define ALIGN(x, a)         _ALIGN_(x, (typeof(x))(a) - 1)
 
-/*当一帧视频数据解码后，该callback函数被调用返回解码后的视频数据和相关的信息*/
-static int vframes_callback(void *p_pOwner, void *cb_data) {
-    ST_EPCallbackData *data_info = (ST_EPCallbackData *)cb_data;
+DEC_CONFIG_t dec_conf;
+AMLDEC_HANDLE_t vdec_handle;
 
-    data_info->stCallbackFrameInfo[0].stVideoFrame.pszFrameData：解码出的原始视频数据，格式为data_info.format定义的
-    data_info->stCallbackFrameInfo[0].stVideoFrame.uFrameSize：  解码出的原始视频数据大小
+/*Step 1: Initialize the video decoder*/
+memset(&dec_conf, 0, sizeof(DEC_CONFIG_t));
 
-    data_info->stCallbackFrameInfo[1].stVideoFrame.pszFrameData：resize后的视频数据，格式为data_info.format定义的
-    data_info->stCallbackFrameInfo[1].stVideoFrame.uFrameSize：  resize后的视频数据大小
+dec_conf.play_id     = <playback channel id: 1, 2, 3, 4 ...>;
+dec_conf.format      = <DEC_FORMAT_t defined in amldec.h.
+                        the default hardware decoding output is VDEC_FORMAT_NV12>;
+dec_conf.src_width   = ALIGN(<original video width>, 32);
+dec_conf.src_height  = ALIGN(<original video height>, 32);
+
+dec_conf.dest_width  = <expected output video width>;
+dec_conf.dest_height = <expected output video height>;
+
+dec_conf.tbuf        = kVdecBuffer_MEM;
+dec_conf.opaque      = <application private data OR NULL>;
+
+vdec_handle = amlDecInit(&dec_conf);
+if (!vdec_handle) {
+    //success
+} else {
+    //failure
 }
 
-/*对于多路解码的应用，用户可能需要传入标识该路解码的数据结构指针。
-  该指针不会做处理，直接由callback函数vframes_callback（）中的*p_pOwner返回
-*/
-data_info.cb_priv    = (void *)<private data pointer>;
-/*自定义的callback函数来处理返回的视频图片*/
-data_info.cb_aifncb  = (void *)vframes_callback;
-data_info.rsz_width  = <如果图片需要同时返回resize之后的图片，在这里输入resize的宽度>;
-data_info.rsz_height = <如果图片需要同时返回resize之后的图片，在这里输入resize的高度>;
-data_info.format     = <硬件解码后的视频数据格式是GST_VIDEO_DATA_FORMAT_NV12，
-                        如果需要直接返回其他格式的数据，需要在这里定义>;
+/*Step 2: Start the video decoder*/
+int rc;
+rc = amlDecStart(vdec_handle);
+if (rc == 0) {
+    //success
+} else {
+    //failure
+}
 
-/*播放视频流，一直到播放完成*/
-xhiveplayer_vcb(<播放视频的URL，可以为http, rtsp, file etc>,
-                <解码路数的id>,
-                <多线程处理多路解码：0； 多进程处理解码：1>,
-                (void *)&data_info);
+/*Step 3: Feed the video ES packages into the video decoder continuously*/
+2 options currently are supported
+1) Gstreamer: GstSample *frame
+GstFlowReturn status = GST_FLOW_ERROR;
+status = amlDecSendData(vdec_handle, sample, DEC_DATA_GST);
+if (status != GST_FLOW_OK) {
+    //failure
+} else {
+    //success
+}
+
+2) AMLDEC_DATA_t *frame
+AMLDEC_DATA_t *frame;
+frame->codec        = <DEC_CODEC_t>;
+frame->is_key_frame = <1: I frame, 0: P/B frames>;
+frame->pts_us       = <64-bit pts in us>;
+frame->data         = <Video ES Package Data Buffer>;
+frame->size         = <Size of the video buffer>;
+
+status = amlDecSendData(vdec_handle, sample, DEC_DATA_SPEC);
+if (status) {
+    //failure
+} else {
+    //success
+}
+
+Note: ffmpeg AVPacket* pkt is not supported right now and planned to be supported in
+      the future.
+
+
+/*Step 4: Start the thread to recieve the decoded picture whenever it is ready*/
+DEC_FRAME_t *frame;
+mlDecReceiveFrame(vdec_handle, &frame);
+
+/*
+VDEC_FORMAT_NV12:
+    frame->buf[0]: YYYY...
+    frame->buf[1]: UV...
+
+VDEC_FORMAT_NV21:
+    frame->buf[0]: YYYY...
+    frame->buf[1]: VU...
+
+VDEC_FORMAT_I420:
+    frame->buf[0]: YYYY...
+    frame->buf[1]: U...
+    frame->buf[2]: V...
+
+VDEC_FORMAT_RGB/VDEC_FORMAT_BGR/VDEC_FORMAT_RGBA...
+    frame->buf[0]
+*/
+
+/*Need to release it once you used it up*/
+amlDecReleaseFrame(rt->vdec_handle, frame);
+
+/*Step 5: Stop the video decoder*/
+1) stop to feed the video data into decoder
+2) amlDecStop(vdec_handle);
+
+/*Step 6: Release the video decoder*/
+amlDecRelease(vdec_handle);

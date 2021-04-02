@@ -20,6 +20,18 @@
 * express and approved by Apoidea in writing.
 */
 
+/***********************************************************************
+* FILE NAME: amlpic.h
+*
+* PURPOSE: header file of amlogic A311D picture processing library
+*
+* DEVELOPMENT HISTORY:
+* Date        Name       Description
+* ---------   ---------- -----------------------------------------------
+* 2020-03-02  Jun Yu     Initial creating
+* 2020-12-30  Jun Yu     Upgrade to version 202011 by using ipc-sdk
+************************************************************************/
+
 #ifndef __AML_PIC_H_
 #define __AML_PIC_H_
 
@@ -45,44 +57,46 @@ __BEGIN_DECLS
 typedef void* AMLPIC_HANDLE_t;
 
 typedef enum {
-    PIC_OP_FORMAT_CONVERT,
-    PIC_OP_SCALE
-} PicOperation_t;
+    /*input user space buffer and output user space buffer. Slowest conversion*/
+    PIC_CONVERT_user2user,
+    /*input dma buffer and output user space buffer. Slow conversion*/
+    PIC_CONVERT_dma2user,
+    /*input dma buffer and output dma buffer. Fastest conversion*/
+    PIC_CONVERT_dma2dma
+} PicCovertType_t;
 
+// PIC_FORMAT_I420 the color displayed to green
 typedef enum {
-    PIC_FORMAT_NV12,
-    PIC_FORMAT_NV21,
-    PIC_FORMAT_I420,
-    PIC_FORMAT_YV12,
-    PIC_FORMAT_RGB24,
-    PIC_FORMAT_RGB32,
+    PIC_FORMAT_NV12 = 0,  // YYYY.....UV....
+    PIC_FORMAT_NV21,  // YYYY.....VU....
+    PIC_FORMAT_I420,  // YYYY.....U....V...  I420
+    PIC_FORMAT_YV12,  // YYYY.....V....U....
+    PIC_FORMAT_YUYV,  // YUYV.....
+    PIC_FORMAT_UYVY,  // UYVY.....
+    PIC_FORMAT_RGB,   // RGB.....
+    PIC_FORMAT_BGR,   // BGR.....
+    PIC_FORMAT_RGBA,  // RGBA.....
+    PIC_FORMAT_BGRA,  // BGRA.....
+    PIC_FORMAT_RGBX,  // BGRX..... X means A=0xFF
+    PIC_FORMAT_ARGB,  // ARGB.....
+    PIC_FORMAT_ABGR,  // ABGR.....
+
+    PIC_FORMAT_MAX
 } PicFormat_t;
 
-typedef struct _PicFormatConvert_t {
-    PicFormat_t src_format;
-    PicFormat_t dest_format;
+typedef struct _PicParam_t {
+    PicFormat_t format;
 
     unsigned int width;
     unsigned int height;
-} PicFormatConvert_t;
-
-typedef struct _PicScale_t {
-    PicFormat_t format;
-
-    unsigned int src_width;
-    unsigned int src_height;
-
-    unsigned int dest_width;
-    unsigned int dest_height;
-} PicScale_t;
+} PicParam_t;
 
 typedef struct _PicSetting_t {
-    union {
-        PicFormatConvert_t fmt_con;
-        PicScale_t         pic_scl;
-    } config_t;
+    PicParam_t src;
+    PicParam_t dest;
 
-    PicOperation_t op;
+    PicCovertType_t op;
+    int play_id;
 } PicSetting_t;
 
 /*
@@ -94,19 +108,30 @@ AMLPIC_HANDLE_t amlPicInit(AMLPIC_IN PicSetting_t *config);
 
 /*
 * To do the configured picture processing
-*   unsigned char *src_pic:    the raw picture data
-*   unsigned char  **dest_pic: proceeded picture data
-*   unsigned int *dest_pic_sz: the size of the proceeded picture data
+*   void *src_pic:   the source picture data
+*                      user space buffer: unsigned char *
+*                      dma buffer: struct AmlIPCFrame * OR struct AmlIPCVideoFrame *
+*   void *dest_pic:  the converted picture data
+*                      the caller need to maintain the buffer(malloc/free etc)
+*                      user space buffer: unsigned char *
+*                      dma buffer: struct AmlIPCFrame * OR struct AmlIPCVideoFrame *
+*   unsigned int  *dest_pic_sz: the size of the converted picture data(user 2user mode)
 */
 int amlPicProc(AMLPIC_IN  AMLPIC_HANDLE_t handle,
-               AMLPIC_IN  unsigned char *src_pic,
-               AMLPIC_OUT unsigned char  **dest_pic,
-               AMLPIC_OUT unsigned int *dest_pic_sz);
+               AMLPIC_IN  void  *src_pic,
+               AMLPIC_OUT void  *dest_pic,
+               AMLPIC_OUT unsigned int   *dest_pic_sz);
 
 /*
 * To release the picture processing handler
 */
 void amlPicRelease(AMLPIC_IN  AMLPIC_HANDLE_t handle);
+
+PicFormat_t amlPicFmtMapping(AMLPIC_IN PicFormat_t fmt);
+
+void amlPicRgba2Argb(AMLPIC_IN unsigned char *pic, int size);
+
+void amlPicRgbx2Xrgb(AMLPIC_IN unsigned char *pic, int size);
 
 __END_DECLS
 

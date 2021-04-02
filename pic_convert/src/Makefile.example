@@ -20,6 +20,10 @@
 # express and approved by Apoidea in writing.
 #
 
+## cd a311d/toolchains/gcc-linaro-6.3.1-2017.02-x86_64_aarch64-linux-gnu/bin
+## pwd
+## export PATH=$PATH:<pwd result path>
+
 CC := aarch64-linux-gnu-gcc
 MODULE := <execution name>
 
@@ -30,7 +34,7 @@ BIN_SRCS := <XXXXX.c>
 LOCAL_CFLAGS := -Werror
 LOCAL_CFLAGS += -Wno-unused-parameter -Wno-missing-field-initializers
 
-LOCAL_LDFLAGS := -Wl,--hash-style=gnu -L../libs -lagilelog -lMagFramework -lamlpic
+LOCAL_LDFLAGS := -Wl,--hash-style=gnu -L../sdk/libs -lamlpic -l<other needed libraries>
 
 BIN_OBJS=$(patsubst %.c, %.o, $(BIN_SRCS))
 

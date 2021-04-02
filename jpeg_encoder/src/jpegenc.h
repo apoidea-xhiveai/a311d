@@ -20,6 +20,16 @@
 * express and approved by Apoidea in writing.
 */
 
+/***********************************************************************
+* FILE NAME: jpegenc.h
+*
+* PURPOSE: header file of amlogic A311D jpeg encoder library
+*
+* DEVELOPMENT HISTORY:
+* Date        Name       Description
+* ---------   ---------- -----------------------------------------------
+* 2020-04-10  Jun Yu     Initial creating
+************************************************************************/
 
 #ifndef __JPEG_ENCODER_H_
 #define __JPEG_ENCODER_H_
@@ -57,7 +67,7 @@ typedef enum{
 } jpegenc_frame_fmt;
 
 typedef struct _JpegEncodeParam_t {
-    int quality;
+    int quality;  /* 1 - 100*/
     int iformat;  /*jpegenc_frame_fmt*/
     int oformat;  /*jpegenc_frame_fmt*/
     int timeout;
